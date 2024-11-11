@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Collection {
+  id          Int                 @id @default(autoincrement())
+  title       String              @unique
+  description String?
+  image       String
+  products    ProductCollection[] // العلاقة العكسية لجدول ProductCollection
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model Product {
+  id          Int                 @id @default(autoincrement())
+  title       String?
+  description String?
+  media       String[]            // Array for media URLs
+  category    String?
+  tags        String[]            // Array for tags
+  sizes       String[]            // Array for sizes
+  colors      String[]            // Array for colors
+  price       Decimal             // Decimal for price
+  expense     Decimal?            // Decimal for expense
+  collections ProductCollection[] // العلاقة العكسية لجدول ProductCollection
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  OrderProducts OrderProduct[]
+}
+
+model ProductCollection {
+  productId    Int
+  collectionId Int
+  product      Product   @relation(fields: [productId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+  @@id([productId, collectionId]) // Composite primary key for the join table
+}
+
+model Order {
+  id                Int              @id @default(autoincrement())
+  customerClerkId   String
+  customer          Customer        @relation(fields: [customerClerkId], references: [clerkId], onDelete: Cascade)
+  products          OrderProduct[]
+  shippingAddress   ShippingAddress?
+  shippingRate      String
+  totalAmount       Float
+  createdAt         DateTime         @default(now())
+}
+
+model OrderProduct {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  productId  Int
+  color      String
+  size       String
+  quantity   Int
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model ShippingAddress {
+  id         Int      @id @default(autoincrement())
+  street     String
+  city       String
+  state      String
+  postalCode String
+  country    String
+  order      Order    @relation(fields: [id], references: [id])
+}
+
+model Customer {
+  id         Int      @id @default(autoincrement())
+  clerkId    String   @unique // Assuming each customer has a unique `clerkId`
+  name       String?
+  email      String? // Assuming email could be optional
+  orders     Order[]  // علاقة مع نموذج Order لتمثيل الطلبات
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
